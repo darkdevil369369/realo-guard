@@ -13,6 +13,16 @@ class Prefs(context: Context) {
         get() = sp.getString("backend", com.realo.guard.BuildConfig.DEFAULT_BACKEND)!!
         set(v) = sp.edit().putString("backend", v.trim().trimEnd('/')).apply()
 
+    // --- auth ---
+    var authToken: String
+        get() = sp.getString("auth_token", "")!!
+        set(v) = sp.edit().putString("auth_token", v).apply()
+    var authEmail: String
+        get() = sp.getString("auth_email", "")!!
+        set(v) = sp.edit().putString("auth_email", v).apply()
+    val loggedIn: Boolean get() = authToken.isNotBlank()
+    fun logout() = sp.edit().remove("auth_token").remove("auth_email").apply()
+
     val deviceId: String
         get() {
             var d = sp.getString("device", null)
@@ -70,6 +80,17 @@ class Prefs(context: Context) {
     }
 
     fun clearAlerts() = sp.edit().remove("alerts").apply()
+
+    /** Remove a single alert by timestamp (user dismissed it). */
+    fun removeAlert(ts: Long) {
+        val arr = JSONArray(sp.getString("alerts", "[]"))
+        val out = JSONArray()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            if (o.optLong("ts") != ts) out.put(o)
+        }
+        sp.edit().putString("alerts", out.toString()).apply()
+    }
 
     companion object {
         // Sensible global default set (user can change). Package names.

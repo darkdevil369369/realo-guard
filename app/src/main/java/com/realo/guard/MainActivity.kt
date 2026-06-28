@@ -65,7 +65,13 @@ class MainActivity : ComponentActivity() {
             filePathCallback?.onReceiveValue(uris)
             filePathCallback = null
         }
-        setContent { RealoTheme { App(this) } }
+        setContent {
+            RealoTheme {
+                val prefs = remember { Prefs(this) }
+                var authed by remember { mutableStateOf(prefs.loggedIn) }
+                if (authed) App(this) { authed = false } else AuthScreen(prefs) { authed = true }
+            }
+        }
     }
 
     fun openFileChooser(cb: ValueCallback<Array<Uri>>, intent: Intent) {
@@ -78,7 +84,7 @@ class MainActivity : ComponentActivity() {
 private enum class Tab { GUARD, TOOLS }
 
 @Composable
-private fun App(activity: MainActivity) {
+private fun App(activity: MainActivity, onLogout: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.GUARD) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -86,7 +92,7 @@ private fun App(activity: MainActivity) {
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                Tab.GUARD -> GuardScreen()
+                Tab.GUARD -> GuardScreen(onLogout)
                 Tab.TOOLS -> ToolsScreen(activity)
             }
         }
@@ -116,7 +122,7 @@ private fun hasAccess(ctx: Context): Boolean {
 }
 
 @Composable
-private fun GuardScreen() {
+private fun GuardScreen(onLogout: () -> Unit) {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
     var granted by remember { mutableStateOf(hasAccess(ctx)) }
@@ -238,10 +244,20 @@ private fun GuardScreen() {
             } else alerts.forEach { AlertRow(it) }
 
             Spacer(Modifier.height(20.dp))
-            // Advanced settings hidden by default — normal users never need them.
-            Text(if (showAdvanced) "Advanced  ▴" else "Advanced  ▾",
-                color = Color(0xFF8B91B5), fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.clickable { showAdvanced = !showAdvanced })
+            // Advanced settings — distinct styled button, hidden content by default.
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF161A2C))
+                    .clickable { showAdvanced = !showAdvanced }
+                    .padding(horizontal = 16.dp, vertical = 15.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("⚙️", fontSize = 16.sp)
+                Spacer(Modifier.width(10.dp))
+                Text("Advanced settings", color = Color(0xFFCBD0EA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.weight(1f))
+                Text(if (showAdvanced) "▴" else "▾", color = Color(0xFF22D3EE), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            }
             if (showAdvanced) {
                 Spacer(Modifier.height(12.dp))
                 SectionTitle("Apps to protect")
@@ -278,7 +294,15 @@ private fun GuardScreen() {
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
+        if (prefs.loggedIn) {
+            Text("Logged in as ${prefs.authEmail}", color = Color(0xFF8B91B5), fontSize = 12.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            TextButton(onClick = { prefs.logout(); onLogout() }, modifier = Modifier.fillMaxWidth()) {
+                Text("Log out", color = Color(0xFFFF4D6D))
+            }
+        }
+        Spacer(Modifier.height(14.dp))
         Text("REALO • global AI anti-scam • on-device consent • nothing stored",
             color = Color(0xFF8B91B5), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(20.dp))
@@ -376,7 +400,7 @@ private fun NavPill(modifier: Modifier, emoji: String, label: String, selected: 
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1020)),
         shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
         Column(Modifier.padding(12.dp)) {
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${a.verdict} · ${a.confidence}%", color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Spacer(Modifier.weight(1f))
                 Text(a.app + "  " + SimpleDateFormat("dd MMM HH:mm", Locale.getDefault()).format(Date(a.ts)),
