@@ -71,6 +71,7 @@ private fun Home() {
     var watched by remember { mutableStateOf(prefs.watched) }
     var alerts by remember { mutableStateOf(prefs.alerts()) }
     var backend by remember { mutableStateOf(prefs.backend) }
+    var trusted by remember { mutableStateOf(prefs.trusted) }
 
     // refresh state when returning from settings
     val owner = LocalLifecycleOwner.current
@@ -144,6 +145,18 @@ private fun Home() {
             } else {
                 alerts.forEach { AlertRow(it) }
             }
+
+            Spacer(Modifier.height(20.dp))
+            SectionTitle("Trusted senders (never flagged)")
+            Text("Comma-separated names REALO should skip — e.g. your own bots, banks you trust. Example: BTCPulse, Mom",
+                color = Color(0xFF8B91B5), fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = trusted, onValueChange = { trusted = it },
+                label = { Text("Trusted names") },
+                modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { prefs.trusted = trusted; trusted = prefs.trusted },
+                modifier = Modifier.fillMaxWidth()) { Text("Save trusted senders") }
 
             Spacer(Modifier.height(20.dp))
             SectionTitle("Engine (backend)")

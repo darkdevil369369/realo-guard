@@ -11,8 +11,8 @@ android {
         applicationId = "com.realo.guard"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = 2
+        versionName = "0.2"
         // Default REALO engine backend (editable in-app). Make permanent later.
         buildConfigField("String", "DEFAULT_BACKEND", "\"https://rings-inter-remembered-effect.trycloudflare.com\"")
     }

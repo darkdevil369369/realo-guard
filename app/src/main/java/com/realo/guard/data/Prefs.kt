@@ -31,6 +31,20 @@ class Prefs(context: Context) {
         watched = s
     }
 
+    /** Comma-separated trusted sender names that REALO never flags (e.g. your own bots). */
+    var trusted: String
+        get() = sp.getString("trusted", "")!!
+        set(v) = sp.edit().putString("trusted", v).apply()
+
+    /** true if this notification title/sender is on the trust list (case-insensitive). */
+    fun isTrusted(title: String): Boolean {
+        if (title.isBlank()) return false
+        val t = title.lowercase()
+        return trusted.split(",").map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .any { t.contains(it) }
+    }
+
     /** Recent alerts (most recent first), capped. */
     fun addAlert(app: String, verdict: String, confidence: Int, snippet: String, advice: String) {
         val arr = JSONArray(sp.getString("alerts", "[]"))

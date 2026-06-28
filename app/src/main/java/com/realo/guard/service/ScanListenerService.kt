@@ -41,6 +41,9 @@ class ScanListenerService : NotificationListenerService() {
         val body = (if (big.isNotBlank()) big else text).trim()
         if (body.length < 12) return                   // skip "2 new messages" etc.
 
+        // skip trusted senders (your own bots, known contacts) — no false alarms
+        if (prefs.isTrusted(title)) return
+
         val message = (if (title.isNotBlank()) "$title: " else "") + body
 
         // de-dupe identical notifications within 60s
