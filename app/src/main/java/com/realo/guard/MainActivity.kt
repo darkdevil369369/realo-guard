@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -85,18 +86,27 @@ private enum class Tab { GUARD, TOOLS }
 
 @Composable
 private fun App(activity: MainActivity, onLogout: () -> Unit) {
+    val ctx = LocalContext.current
+    val prefs = remember { Prefs(ctx) }
     var tab by remember { mutableStateOf(Tab.GUARD) }
+    var showAdv by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = { BottomBar(tab) { tab = it } }
+        bottomBar = {
+            Column {
+                AdvancedLogoutRow(onAdvanced = { showAdv = true }, onLogout = onLogout)
+                BottomBar(tab) { tab = it }
+            }
+        }
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                Tab.GUARD -> GuardScreen(onLogout)
+                Tab.GUARD -> GuardScreen()
                 Tab.TOOLS -> ToolsScreen(activity)
             }
         }
     }
+    if (showAdv) AdvancedDialog(prefs) { showAdv = false }
 }
 
 // Apps REALO can watch (global scam vectors). label -> package
@@ -122,18 +132,15 @@ private fun hasAccess(ctx: Context): Boolean {
 }
 
 @Composable
-private fun GuardScreen(onLogout: () -> Unit) {
+private fun GuardScreen() {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
     var granted by remember { mutableStateOf(hasAccess(ctx)) }
     var watched by remember { mutableStateOf(prefs.watched) }
     var alerts by remember { mutableStateOf(prefs.alerts()) }
-    var backend by remember { mutableStateOf(prefs.backend) }
-    var trusted by remember { mutableStateOf(prefs.trusted) }
 
     var update by remember { mutableStateOf<Updater.Info?>(null) }
     var updateMsg by remember { mutableStateOf("") }
-    var showAdvanced by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val owner = LocalLifecycleOwner.current
@@ -242,68 +249,15 @@ private fun GuardScreen(onLogout: () -> Unit) {
                     }
                 }
             } else alerts.forEach { AlertRow(it) }
-
-            Spacer(Modifier.height(20.dp))
-            // Advanced settings — distinct styled button, hidden content by default.
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF161A2C))
-                    .clickable { showAdvanced = !showAdvanced }
-                    .padding(horizontal = 16.dp, vertical = 15.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("⚙️", fontSize = 16.sp)
-                Spacer(Modifier.width(10.dp))
-                Text("Advanced settings", color = Color(0xFFCBD0EA), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(Modifier.weight(1f))
-                Text(if (showAdvanced) "▴" else "▾", color = Color(0xFF22D3EE), fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            }
-            if (showAdvanced) {
-                Spacer(Modifier.height(12.dp))
-                SectionTitle("Apps to protect")
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(vertical = 4.dp)) {
-                        WATCHABLE.forEach { (label, pkg) ->
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
-                                Switch(checked = pkg in watched, onCheckedChange = {
-                                    prefs.toggleWatched(pkg, it); watched = prefs.watched
-                                })
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                SectionTitle("Trusted senders (rarely needed)")
-                OutlinedTextField(value = trusted, onValueChange = { trusted = it },
-                    label = { Text("Names to never flag (comma-separated)") }, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { prefs.trusted = trusted; trusted = prefs.trusted }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Save trusted senders")
-                }
-                Spacer(Modifier.height(16.dp))
-                SectionTitle("Engine URL (don't change unless told)")
-                OutlinedTextField(value = backend, onValueChange = { backend = it },
-                    label = { Text("REALO engine URL") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { prefs.backend = backend; backend = prefs.backend }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Save engine URL")
-                }
-            }
         }
 
         Spacer(Modifier.height(24.dp))
         if (prefs.loggedIn) {
-            Text("Logged in as ${prefs.authEmail}", color = Color(0xFF8B91B5), fontSize = 12.sp,
+            Text("Logged in as ${prefs.authEmail}", color = Color(0xFF8B91B5), fontSize = 11.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            TextButton(onClick = { prefs.logout(); onLogout() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Log out", color = Color(0xFFFF4D6D))
-            }
+            Spacer(Modifier.height(6.dp))
         }
-        Spacer(Modifier.height(14.dp))
-        Text("REALO • global AI anti-scam • on-device consent • nothing stored",
+        Text("REALO • global AI anti-scam • nothing stored",
             color = Color(0xFF8B91B5), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(20.dp))
     }
@@ -337,6 +291,64 @@ private fun ToolsScreen(activity: MainActivity) {
             loadUrl(prefs.backend)
         }
     })
+}
+
+@Composable
+private fun AdvancedLogoutRow(onAdvanced: () -> Unit, onLogout: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(Color(0xFF0F1220))
+            .padding(start = 14.dp, end = 14.dp, top = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFF161A2C))
+                .clickable { onAdvanced() }.padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("⚙️", fontSize = 14.sp)
+            Spacer(Modifier.width(8.dp))
+            Text("Advanced", color = Color(0xFFCBD0EA), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        Row(
+            Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF2A1622))
+                .clickable { onLogout() }.padding(horizontal = 18.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Log out", color = Color(0xFFFF4D6D), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AdvancedDialog(prefs: Prefs, onDismiss: () -> Unit) {
+    var watched by remember { mutableStateOf(prefs.watched) }
+    var trusted by remember { mutableStateOf(prefs.trusted) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF141728)) {
+            Column(Modifier.padding(20.dp).heightIn(max = 540.dp).verticalScroll(rememberScrollState())) {
+                Text("Advanced", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEEF1FF))
+                Spacer(Modifier.height(14.dp))
+                SectionTitle("Apps to protect")
+                WATCHABLE.forEach { (label, pkg) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f), color = Color(0xFFEEF1FF))
+                        Switch(checked = pkg in watched, onCheckedChange = { prefs.toggleWatched(pkg, it); watched = prefs.watched })
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                SectionTitle("Trusted senders (rarely needed)")
+                OutlinedTextField(value = trusted, onValueChange = { trusted = it },
+                    label = { Text("Names to never flag (comma-separated)") }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { prefs.trusted = trusted; trusted = prefs.trusted }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Save")
+                }
+                Spacer(Modifier.height(6.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Close") }
+            }
+        }
+    }
 }
 
 @Composable
