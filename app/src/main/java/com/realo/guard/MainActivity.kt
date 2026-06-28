@@ -93,10 +93,7 @@ private fun App(activity: MainActivity, onLogout: () -> Unit) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            Column {
-                AdvancedLogoutRow(onAdvanced = { showAdv = true }, onLogout = onLogout)
-                BottomBar(tab) { tab = it }
-            }
+            BottomNav(tab, onSelect = { tab = it }, onAdvanced = { showAdv = true }, onLogout = onLogout)
         }
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
@@ -294,28 +291,34 @@ private fun ToolsScreen(activity: MainActivity) {
 }
 
 @Composable
-private fun AdvancedLogoutRow(onAdvanced: () -> Unit, onLogout: () -> Unit) {
+private fun BottomNav(tab: Tab, onSelect: (Tab) -> Unit, onAdvanced: () -> Unit, onLogout: () -> Unit) {
+    Surface(color = Color(0xFF0F1220)) {
+        Column(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // TOP row: Guard | Tools
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                NavPill(Modifier.weight(1f), "🛡️", "Guard", tab == Tab.GUARD) { onSelect(Tab.GUARD) }
+                NavPill(Modifier.weight(1f), "🧰", "Tools", tab == Tab.TOOLS) { onSelect(Tab.TOOLS) }
+            }
+            // BOTTOM row: Advanced | Log out (same size)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionPill(Modifier.weight(1f), "⚙️", "Advanced", Color(0xFF1A1E30), Color(0xFFCBD0EA)) { onAdvanced() }
+                ActionPill(Modifier.weight(1f), "", "Log out", Color(0xFF2A1622), Color(0xFFFF4D6D)) { onLogout() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionPill(modifier: Modifier, emoji: String, label: String, bg: Color, fg: Color, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(Color(0xFF0F1220))
-            .padding(start = 14.dp, end = 14.dp, top = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        modifier.clip(RoundedCornerShape(16.dp)).background(bg).clickable { onClick() }.padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFF161A2C))
-                .clickable { onAdvanced() }.padding(horizontal = 14.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("⚙️", fontSize = 14.sp)
-            Spacer(Modifier.width(8.dp))
-            Text("Advanced", color = Color(0xFFCBD0EA), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        }
-        Row(
-            Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF2A1622))
-                .clickable { onLogout() }.padding(horizontal = 18.dp, vertical = 11.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Log out", color = Color(0xFFFF4D6D), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        }
+        if (emoji.isNotEmpty()) { Text(emoji, fontSize = 16.sp); Spacer(Modifier.width(8.dp)) }
+        Text(label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = fg)
     }
 }
 
@@ -347,19 +350,6 @@ private fun AdvancedDialog(prefs: Prefs, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Close") }
             }
-        }
-    }
-}
-
-@Composable
-private fun BottomBar(tab: Tab, onSelect: (Tab) -> Unit) {
-    Surface(color = Color(0xFF0F1220)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            NavPill(Modifier.weight(1f), "🛡️", "Guard", tab == Tab.GUARD) { onSelect(Tab.GUARD) }
-            NavPill(Modifier.weight(1f), "🧰", "Tools", tab == Tab.TOOLS) { onSelect(Tab.TOOLS) }
         }
     }
 }
