@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Framework theme only (no Material XML lib needed; UI is Jetpack Compose). -->
+    <style name="Theme.RealoGuard" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#FF0B0D17</item>
+        <item name="android:navigationBarColor">#FF0B0D17</item>
+        <item name="android:windowBackground">#FF0B0D17</item>
+    </style>
+</resources>
