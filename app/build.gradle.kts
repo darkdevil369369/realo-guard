@@ -11,18 +11,30 @@ android {
         applicationId = "com.realo.guard"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2"
+        versionCode = 3
+        versionName = "0.3"
         // Default REALO engine backend (editable in-app). Make permanent later.
         buildConfigField("String", "DEFAULT_BACKEND", "\"https://rings-inter-remembered-effect.trycloudflare.com\"")
+    }
+
+    // Fixed signing key so every version installs over the previous (no "package conflict").
+    signingConfigs {
+        create("realo") {
+            storeFile = file("realo.keystore")
+            storePassword = "realo123"
+            keyAlias = "realo"
+            keyPassword = "realo123"
+        }
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("realo")
         }
         getByName("debug") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("realo")
         }
     }
 
