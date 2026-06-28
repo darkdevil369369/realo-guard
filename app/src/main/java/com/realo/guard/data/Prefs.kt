@@ -45,6 +45,9 @@ class Prefs(context: Context) {
             .any { t.contains(it) }
     }
 
+    /** Lifetime count of scams blocked (for the dashboard). */
+    val blocked: Int get() = sp.getInt("blocked", 0)
+
     /** Recent alerts (most recent first), capped. */
     fun addAlert(app: String, verdict: String, confidence: Int, snippet: String, advice: String) {
         val arr = JSONArray(sp.getString("alerts", "[]"))
@@ -54,7 +57,7 @@ class Prefs(context: Context) {
             .put("snippet", snippet).put("advice", advice)
         val out = JSONArray().put(o)
         for (i in 0 until minOf(arr.length(), 49)) out.put(arr.get(i))
-        sp.edit().putString("alerts", out.toString()).apply()
+        sp.edit().putString("alerts", out.toString()).putInt("blocked", blocked + 1).apply()
     }
 
     fun alerts(): List<Alert> {
