@@ -56,7 +56,10 @@ class ScanListenerService : NotificationListenerService() {
         val appName = appLabel(pkg)
         scope.launch {
             val r = Engine.scan(prefs.backend, prefs.deviceId, message) ?: return@launch
-            if ((r.verdict == "SCAM" || r.verdict == "SUSPICIOUS") && r.confidence >= 60) {
+            // CREDIBILITY FIRST: only alarm on CLEAR, high-confidence scams.
+            // Borderline "SUSPICIOUS" never fires an alarm — a false alarm costs more
+            // than a missed borderline case. (Engine precision + trusted-senders also help.)
+            if (r.verdict == "SCAM" && r.confidence >= 80) {
                 prefs.addAlert(appName, r.verdict, r.confidence, body.take(140), r.advice)
                 warn(appName, r.verdict, r.confidence, r.advice, body.take(120))
             }
