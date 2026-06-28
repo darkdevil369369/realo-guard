@@ -15,10 +15,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Shield
@@ -77,16 +81,7 @@ private fun App(activity: MainActivity) {
     var tab by remember { mutableStateOf(Tab.GUARD) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                NavigationBarItem(
-                    selected = tab == Tab.GUARD, onClick = { tab = Tab.GUARD },
-                    icon = { Icon(Icons.Filled.Shield, null) }, label = { Text("Guard") })
-                NavigationBarItem(
-                    selected = tab == Tab.TOOLS, onClick = { tab = Tab.TOOLS },
-                    icon = { Icon(Icons.Filled.Build, null) }, label = { Text("Tools") })
-            }
-        }
+        bottomBar = { BottomBar(tab) { tab = it } }
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
@@ -131,6 +126,7 @@ private fun GuardScreen() {
 
     var update by remember { mutableStateOf<Updater.Info?>(null) }
     var updateMsg by remember { mutableStateOf("") }
+    var showAdvanced by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val owner = LocalLifecycleOwner.current
@@ -175,68 +171,90 @@ private fun GuardScreen() {
             Spacer(Modifier.height(16.dp))
         }
 
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(18.dp)) {
-                if (granted) {
-                    Text("🛡️  Protection is ON", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF22C55E))
-                    Spacer(Modifier.height(6.dp))
-                    Text("REALO is watching your chosen apps in the background. You don't need to do anything.",
-                        color = Color(0xFF8B91B5), fontSize = 14.sp)
-                } else {
-                    Text("⚠️  Protection is OFF", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFB020))
-                    Spacer(Modifier.height(6.dp))
-                    Text("One-time setup: allow REALO to read notifications so it can auto-check messages for scams. Nothing is stored or shared.",
-                        color = Color(0xFF8B91B5), fontSize = 14.sp)
-                    Spacer(Modifier.height(12.dp))
+        if (!granted) {
+            // ---- FIRST-RUN: clean welcome + single CTA (no settings dump) ----
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(22.dp)) {
+                    Text("🛡️", fontSize = 40.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Text("Stop scams before they reach you", fontSize = 21.sp,
+                        fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
+                    Spacer(Modifier.height(10.dp))
+                    Bullet("Watches WhatsApp, Telegram & more — automatically")
+                    Bullet("Warns you the instant a scam message arrives")
+                    Bullet("Nothing is stored or shared — you stay in control")
+                    Spacer(Modifier.height(18.dp))
                     Button(onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
-                        modifier = Modifier.fillMaxWidth()) { Text("Turn on protection") }
+                        modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                        Text("Enable protection", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("On the next screen, turn on REALO Guard. That's it.",
+                        color = Color(0xFF8B91B5), fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth())
                 }
             }
-        }
+        } else {
+            // ---- PROTECTED: status + alerts + (advanced collapsed) ----
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp)) {
+                    Text("🛡️  You're protected", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF22C55E))
+                    Spacer(Modifier.height(6.dp))
+                    Text("REALO is watching your apps in the background. You don't need to do anything — it'll warn you if a scam arrives.",
+                        color = Color(0xFF8B91B5), fontSize = 14.sp)
+                }
+            }
 
-        Spacer(Modifier.height(18.dp))
-        SectionTitle("Apps to protect (you choose)")
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(vertical = 4.dp)) {
-                WATCHABLE.forEach { (label, pkg) ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
-                        Switch(checked = pkg in watched, onCheckedChange = {
-                            prefs.toggleWatched(pkg, it); watched = prefs.watched
-                        })
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle("Recent scam alerts")
+                Spacer(Modifier.weight(1f))
+                if (alerts.isNotEmpty()) TextButton(onClick = { prefs.clearAlerts(); alerts = emptyList() }) { Text("Clear") }
+            }
+            if (alerts.isEmpty()) Text("No scams caught yet — that's good news.", color = Color(0xFF8B91B5), fontSize = 14.sp)
+            else alerts.forEach { AlertRow(it) }
+
+            Spacer(Modifier.height(20.dp))
+            // Advanced settings hidden by default — normal users never need them.
+            Text(if (showAdvanced) "Advanced  ▴" else "Advanced  ▾",
+                color = Color(0xFF8B91B5), fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clickable { showAdvanced = !showAdvanced })
+            if (showAdvanced) {
+                Spacer(Modifier.height(12.dp))
+                SectionTitle("Apps to protect")
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        WATCHABLE.forEach { (label, pkg) ->
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
+                                Switch(checked = pkg in watched, onCheckedChange = {
+                                    prefs.toggleWatched(pkg, it); watched = prefs.watched
+                                })
+                            }
+                        }
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+                SectionTitle("Trusted senders (rarely needed)")
+                OutlinedTextField(value = trusted, onValueChange = { trusted = it },
+                    label = { Text("Names to never flag (comma-separated)") }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { prefs.trusted = trusted; trusted = prefs.trusted }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Save trusted senders")
+                }
+                Spacer(Modifier.height(16.dp))
+                SectionTitle("Engine URL (don't change unless told)")
+                OutlinedTextField(value = backend, onValueChange = { backend = it },
+                    label = { Text("REALO engine URL") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { prefs.backend = backend; backend = prefs.backend }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Save engine URL")
+                }
             }
-        }
-
-        Spacer(Modifier.height(18.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SectionTitle("Recent scam alerts")
-            Spacer(Modifier.weight(1f))
-            if (alerts.isNotEmpty()) TextButton(onClick = { prefs.clearAlerts(); alerts = emptyList() }) { Text("Clear") }
-        }
-        if (alerts.isEmpty()) Text("No scams caught yet — that's good news.", color = Color(0xFF8B91B5), fontSize = 14.sp)
-        else alerts.forEach { AlertRow(it) }
-
-        Spacer(Modifier.height(20.dp))
-        SectionTitle("Trusted senders (optional — rarely needed)")
-        OutlinedTextField(value = trusted, onValueChange = { trusted = it },
-            label = { Text("Names to never flag (comma-separated)") }, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = { prefs.trusted = trusted; trusted = prefs.trusted }, modifier = Modifier.fillMaxWidth()) {
-            Text("Save trusted senders")
-        }
-
-        Spacer(Modifier.height(20.dp))
-        SectionTitle("Engine (backend)")
-        OutlinedTextField(value = backend, onValueChange = { backend = it },
-            label = { Text("REALO engine URL") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = { prefs.backend = backend; backend = prefs.backend }, modifier = Modifier.fillMaxWidth()) {
-            Text("Save engine URL")
         }
 
         Spacer(Modifier.height(28.dp))
@@ -274,6 +292,46 @@ private fun ToolsScreen(activity: MainActivity) {
             loadUrl(prefs.backend)
         }
     })
+}
+
+@Composable
+private fun BottomBar(tab: Tab, onSelect: (Tab) -> Unit) {
+    Surface(color = Color(0xFF0F1220)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            NavPill(Modifier.weight(1f), "🛡️", "Guard", tab == Tab.GUARD) { onSelect(Tab.GUARD) }
+            NavPill(Modifier.weight(1f), "🧰", "Tools", tab == Tab.TOOLS) { onSelect(Tab.TOOLS) }
+        }
+    }
+}
+
+@Composable
+private fun NavPill(modifier: Modifier, emoji: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    val grad = Brush.horizontalGradient(listOf(Color(0xFF7C5CFF), Color(0xFF22D3EE)))
+    Row(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .then(if (selected) Modifier.background(grad) else Modifier.background(Color(0xFF1A1E30)))
+            .clickable { onClick() }
+            .padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(emoji, fontSize = 16.sp)
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 15.sp,
+            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+            color = if (selected) Color(0xFF08101F) else Color(0xFF8B91B5))
+    }
+}
+
+@Composable private fun Bullet(t: String) {
+    Row(Modifier.padding(vertical = 3.dp)) {
+        Text("✓ ", color = Color(0xFF22C55E), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(t, color = Color(0xFFCBD0EA), fontSize = 14.sp, lineHeight = 19.sp)
+    }
 }
 
 @Composable private fun SectionTitle(t: String) {
