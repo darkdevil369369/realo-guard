@@ -36,9 +36,7 @@ class ScanListenerService : NotificationListenerService() {
 
         val extras = sbn.notification.extras ?: return
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
-        val big = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
-        val body = (if (big.isNotBlank()) big else text).trim()
+        val body = extractText(extras).trim()
         if (body.length < 12) return                   // skip "2 new messages" etc.
 
         // skip trusted senders (your own bots, known contacts) — no false alarms
@@ -64,6 +62,36 @@ class ScanListenerService : NotificationListenerService() {
                 warn(appName, r.verdict, r.confidence, r.advice, body.take(120))
             }
         }
+    }
+
+    /**
+     * Robustly pull the real message text from ANY notification style:
+     * MessagingStyle (WhatsApp/Telegram, bundled chats), InboxStyle (multi-line),
+     * BigTextStyle, and plain text. Returns the most recent meaningful message.
+     */
+    private fun extractText(extras: android.os.Bundle): String {
+        // 1) MessagingStyle — actual chat messages live here (latest = last)
+        try {
+            val msgs = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            if (msgs != null && msgs.isNotEmpty()) {
+                val texts = msgs.mapNotNull { p ->
+                    (p as? android.os.Bundle)?.getCharSequence("text")?.toString()?.trim()
+                }.filter { it.isNotEmpty() }
+                if (texts.isNotEmpty()) return texts.last()   // newest message
+            }
+        } catch (_: Exception) {}
+        // 2) InboxStyle — array of lines (newest usually last)
+        try {
+            val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            if (lines != null && lines.isNotEmpty()) {
+                val l = lines.mapNotNull { it?.toString()?.trim() }.filter { it.isNotEmpty() }
+                if (l.isNotEmpty()) return l.last()
+            }
+        } catch (_: Exception) {}
+        // 3) BigTextStyle / plain
+        val big = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
+        if (big.isNotBlank()) return big
+        return extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
     }
 
     private fun appLabel(pkg: String): String = try {
