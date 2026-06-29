@@ -90,16 +90,17 @@ private fun App(activity: MainActivity, onLogout: () -> Unit) {
     val prefs = remember { Prefs(ctx) }
     var tab by remember { mutableStateOf(Tab.GUARD) }
     var showAdv by remember { mutableStateOf(false) }
+    var toolsHash by remember { mutableStateOf("") }   // "#deepfake" when opened from the card
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            BottomNav(tab, onSelect = { tab = it }, onAdvanced = { showAdv = true }, onLogout = onLogout)
+            BottomNav(tab, onSelect = { toolsHash = ""; tab = it }, onAdvanced = { showAdv = true }, onLogout = onLogout)
         }
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                Tab.GUARD -> GuardScreen()
-                Tab.TOOLS -> ToolsScreen(activity)
+                Tab.GUARD -> GuardScreen(onOpenDeepfake = { toolsHash = "#deepfake"; tab = Tab.TOOLS })
+                Tab.TOOLS -> ToolsScreen(activity, toolsHash)
             }
         }
     }
@@ -129,7 +130,7 @@ private fun hasAccess(ctx: Context): Boolean {
 }
 
 @Composable
-private fun GuardScreen() {
+private fun GuardScreen(onOpenDeepfake: () -> Unit) {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
     var granted by remember { mutableStateOf(hasAccess(ctx)) }
@@ -157,6 +158,30 @@ private fun GuardScreen() {
         Text("REALO Guard", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onBackground)
         Text("autopilot scam guard  •  v" + BuildConfig.VERSION_NAME, color = Color(0xFF8B91B5), fontSize = 13.sp)
+        Spacer(Modifier.height(16.dp))
+
+        // ---- FLAGSHIP: Is this photo real or AI? (deepfake) ----
+        Box(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFFF4DA0), Color(0xFF7C5CFF))))
+                .clickable { onOpenDeepfake() }.padding(18.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(60.dp).clip(CircleShape).background(Color.White),
+                    contentAlignment = Alignment.Center) { Text("✨", fontSize = 28.sp) }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Is this photo real or AI?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                    Spacer(Modifier.height(3.dp))
+                    Text("Catch deepfakes in 1 tap — free", color = Color(0xF5F5F0FF), fontSize = 12.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Box(Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White)
+                        .padding(horizontal = 14.dp, vertical = 7.dp)) {
+                        Text("✨ Check a photo  →", color = Color(0xFF7C5CFF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
 
         update?.let { up ->
@@ -262,7 +287,7 @@ private fun GuardScreen() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun ToolsScreen(activity: MainActivity) {
+private fun ToolsScreen(activity: MainActivity, hash: String = "") {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
     AndroidView(modifier = Modifier.fillMaxSize(), factory = {
@@ -285,7 +310,7 @@ private fun ToolsScreen(activity: MainActivity) {
                     return true
                 }
             }
-            loadUrl(prefs.backend)
+            loadUrl(prefs.backend + hash)
         }
     })
 }
