@@ -153,12 +153,23 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
         update = withContext(Dispatchers.IO) { Updater.check(BuildConfig.VERSION_NAME) }
     }
 
+    val brandGrad = Brush.linearGradient(listOf(Color(0xFF7C5CFF), Color(0xFF22D3EE)))
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-        Spacer(Modifier.height(8.dp))
-        Text("REALO Guard", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onBackground)
-        Text("autopilot scam guard  •  v" + BuildConfig.VERSION_NAME, color = Color(0xFF8B91B5), fontSize = 13.sp)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(brandGrad),
+                contentAlignment = Alignment.Center) { Text("🛡️", fontSize = 22.sp) }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    "REALO Guard", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold,
+                    style = LocalTextStyle.current.copy(brush = brandGrad)
+                )
+                Text("autopilot scam guard  •  v" + BuildConfig.VERSION_NAME,
+                    color = Color(0xFF8B91B5), fontSize = 12.sp)
+            }
+        }
+        Spacer(Modifier.height(18.dp))
 
         // ---- FLAGSHIP: Is this photo real or AI? (deepfake) ----
         Box(
