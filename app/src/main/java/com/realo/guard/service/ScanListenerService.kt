@@ -121,8 +121,12 @@ class ScanListenerService : NotificationListenerService() {
             .setAutoCancel(true)
             .setContentIntent(tap)
             .build()
-        nm.notify(snippet.hashCode(), n)
+        // unique id per alert → every scam shows a fresh heads-up (never silently merged)
+        nm.notify(_alertId.incrementAndGet(), n)
     }
 
-    companion object { private const val CHANNEL = "realo_alerts" }
+    companion object {
+        private const val CHANNEL = "realo_alerts"
+        private val _alertId = java.util.concurrent.atomic.AtomicInteger(1000)
+    }
 }
