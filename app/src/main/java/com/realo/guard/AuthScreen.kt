@@ -127,6 +127,9 @@ fun AuthScreen(prefs: Prefs, onAuthed: () -> Unit) {
             Spacer(Modifier.height(30.dp))
             Text("Your email is used to secure your account and send scam alerts. Nothing is sold.",
                 color = Color(0xFF8B91B5), fontSize = 11.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(8.dp))
+            Text("By continuing you agree that REALO is an assistive scam-detection aid, not a guarantee. It scans messages shown in your notifications (keep them ON for protected apps) and may miss scams or flag genuine messages. Always use your own judgment; REALO is not liable for any loss.",
+                color = Color(0xFF6B7194), fontSize = 10.sp, textAlign = TextAlign.Center, lineHeight = 13.sp)
         }
     }
 }

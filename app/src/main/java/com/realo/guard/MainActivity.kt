@@ -229,6 +229,10 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
                     Text("On the next screen, turn on REALO Guard. That's it.",
                         color = Color(0xFF8B91B5), fontSize = 12.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(8.dp))
+                    Text("REALO reads your notifications to spot scams. Keep notifications ON for protected apps. It's an aid, not a guarantee — always use your own judgment.",
+                        color = Color(0xFF6B7194), fontSize = 10.sp, textAlign = TextAlign.Center,
+                        lineHeight = 13.sp, modifier = Modifier.fillMaxWidth())
                 }
             }
         } else {
@@ -279,6 +283,17 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(6.dp))
         }
+        // Persistent disclaimer (legal): how it works + not a guarantee
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF12101A)),
+            shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Text(
+                "ⓘ REALO scans messages shown in your notifications — keep notifications ON for the apps you protect. " +
+                "If an app's notifications are off or hidden, REALO can't scan it. REALO is an assistive aid, not a guarantee: " +
+                "it may miss some scams or flag genuine messages. Always use your own judgment — never share OTP/passwords or send money based only on (or despite) REALO.",
+                color = Color(0xFF8B91B5), fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(12.dp)
+            )
+        }
+        Spacer(Modifier.height(10.dp))
         Text("REALO • global AI anti-scam • nothing stored",
             color = Color(0xFF8B91B5), fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(20.dp))
