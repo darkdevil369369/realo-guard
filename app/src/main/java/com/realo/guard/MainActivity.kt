@@ -322,6 +322,8 @@ private fun ToolsScreen(activity: MainActivity, hash: String = "") {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             settings.mediaPlaybackRequiresUserGesture = false
+            // identify ourselves so the web toolkit hides "Get the app" / signup-wall inside the app
+            settings.userAgentString = (settings.userAgentString ?: "") + " RealoApp"
             webViewClient = WebViewClient()
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(
