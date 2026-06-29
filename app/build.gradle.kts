@@ -11,10 +11,10 @@ android {
         applicationId = "com.realo.guard"
         minSdk = 26
         targetSdk = 34
-        versionCode = 16
-        versionName = "1.6"
-        // Default REALO engine backend (editable in-app). Make permanent later.
-        buildConfigField("String", "DEFAULT_BACKEND", "\"https://rings-inter-remembered-effect.trycloudflare.com\"")
+        versionCode = 17
+        versionName = "1.7"
+        // Permanent REALO engine backend (Cloudflare named tunnel -> systemd, reboot-proof).
+        buildConfigField("String", "DEFAULT_BACKEND", "\"https://api.tryrealo.com\"")
     }
 
     // Fixed signing key so every version installs over the previous (no "package conflict").
