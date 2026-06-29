@@ -350,13 +350,47 @@ private fun ActionPill(modifier: Modifier, emoji: String, label: String, bg: Col
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AdvancedDialog(prefs: Prefs, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
     var watched by remember { mutableStateOf(prefs.watched) }
     var trusted by remember { mutableStateOf(prefs.trusted) }
+    var upStatus by remember { mutableStateOf("") }
+    var upInfo by remember { mutableStateOf<Updater.Info?>(null) }
+    val scope = rememberCoroutineScope()
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF141728)) {
-            Column(Modifier.padding(20.dp).heightIn(max = 540.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.padding(20.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
                 Text("Advanced", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEEF1FF))
                 Spacer(Modifier.height(14.dp))
+
+                // --- Updates ---
+                SectionTitle("App version  •  v${BuildConfig.VERSION_NAME}")
+                if (upInfo == null) {
+                    Button(onClick = {
+                        upStatus = "Checking…"
+                        scope.launch {
+                            val r = withContext(Dispatchers.IO) { Updater.checkDetailed(BuildConfig.VERSION_NAME) }
+                            when (r.status) {
+                                "update" -> { upInfo = r.info; upStatus = "Update ${r.info?.tag} available!" }
+                                "latest" -> upStatus = "✅ You're on the latest version."
+                                else -> upStatus = "Couldn't check: ${r.message}"
+                            }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("Check for updates") }
+                } else {
+                    Button(onClick = {
+                        upStatus = "Downloading…"
+                        scope.launch {
+                            val f = withContext(Dispatchers.IO) { Updater.download(ctx, upInfo!!.apkUrl) }
+                            if (f != null) { upStatus = "Tap Install to finish."; Updater.install(ctx, f) }
+                            else upStatus = "Download failed — check connection."
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("⬆️ Update to ${upInfo!!.tag}") }
+                }
+                if (upStatus.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp)); Text(upStatus, color = Color(0xFF8B91B5), fontSize = 12.sp)
+                }
+
+                Spacer(Modifier.height(18.dp))
                 SectionTitle("Apps to protect")
                 WATCHABLE.forEach { (label, pkg) ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -17,17 +17,25 @@ object Updater {
         .connectTimeout(8, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
 
     data class Info(val tag: String, val apkUrl: String)
+    // status: "update" (info set) | "latest" | "error" (message set)
+    data class CheckResult(val status: String, val info: Info? = null, val message: String = "")
 
-    /** Returns update info if GitHub's latest release is newer than [currentVersion], else null. */
-    fun check(currentVersion: String): Info? {
+    /** Auto-check helper for the banner — returns Info only when an update exists. */
+    fun check(currentVersion: String): Info? = checkDetailed(currentVersion).info
+
+    /** Full check with a visible status so failures are never silent. */
+    fun checkDetailed(currentVersion: String): CheckResult {
         return try {
             val req = Request.Builder().url(API)
-                .header("Accept", "application/vnd.github+json").build()
+                .header("Accept", "application/vnd.github+json")
+                .header("User-Agent", "RealoGuard-Android")   // GitHub API requires a UA
+                .build()
             client.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return null
-                val o = JSONObject(resp.body?.string() ?: return null)
-                val tag = o.optString("tag_name").ifBlank { return null }   // e.g. "v0.6"
-                val assets = o.optJSONArray("assets") ?: return null
+                if (!resp.isSuccessful)
+                    return CheckResult("error", message = "GitHub error ${resp.code}")
+                val o = JSONObject(resp.body?.string() ?: return CheckResult("error", message = "empty response"))
+                val tag = o.optString("tag_name").ifBlank { return CheckResult("error", message = "no release") }
+                val assets = o.optJSONArray("assets") ?: return CheckResult("error", message = "no files")
                 var apk = ""
                 for (i in 0 until assets.length()) {
                     val a = assets.getJSONObject(i)
@@ -35,10 +43,14 @@ object Updater {
                         apk = a.optString("browser_download_url"); break
                     }
                 }
-                if (apk.isBlank()) return null
-                if (isNewer(tag.removePrefix("v"), currentVersion)) Info(tag, apk) else null
+                if (apk.isBlank()) return CheckResult("error", message = "no APK in release")
+                if (isNewer(tag.removePrefix("v"), currentVersion))
+                    CheckResult("update", info = Info(tag, apk))
+                else CheckResult("latest")
             }
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            CheckResult("error", message = (e.message ?: "no connection"))
+        }
     }
 
     /** dotted-version compare: returns true if [latest] > [current]. */
