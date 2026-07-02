@@ -99,7 +99,7 @@ private fun App(activity: MainActivity, onLogout: () -> Unit) {
     ) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                Tab.GUARD -> GuardScreen(onOpenDeepfake = { toolsHash = "#deepfake"; tab = Tab.TOOLS })
+                Tab.GUARD -> GuardScreen(onOpenTool = { h -> toolsHash = h; tab = Tab.TOOLS })
                 Tab.TOOLS -> ToolsScreen(activity, toolsHash)
             }
         }
@@ -130,7 +130,7 @@ private fun hasAccess(ctx: Context): Boolean {
 }
 
 @Composable
-private fun GuardScreen(onOpenDeepfake: () -> Unit) {
+private fun GuardScreen(onOpenTool: (String) -> Unit) {
     val ctx = LocalContext.current
     val prefs = remember { Prefs(ctx) }
     var granted by remember { mutableStateOf(hasAccess(ctx)) }
@@ -153,7 +153,7 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
         update = withContext(Dispatchers.IO) { Updater.check(BuildConfig.VERSION_NAME) }
     }
 
-    val brandGrad = Brush.linearGradient(listOf(Color(0xFF7C5CFF), Color(0xFF22D3EE)))
+    val brandGrad = Brush.linearGradient(listOf(Color(0xFF2F6BFF), Color(0xFF1D4ED8)))
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -163,35 +163,24 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
             Column {
                 Text(
                     "REALO Guard", fontSize = 27.sp, fontWeight = FontWeight.ExtraBold,
-                    style = LocalTextStyle.current.copy(brush = brandGrad)
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                Text("autopilot scam guard  •  v" + BuildConfig.VERSION_NAME,
-                    color = Color(0xFF8B91B5), fontSize = 12.sp)
+                Text("Automatic scam protection  •  v" + BuildConfig.VERSION_NAME,
+                    color = Color(0xFF868DA3), fontSize = 12.sp)
             }
         }
         Spacer(Modifier.height(18.dp))
 
-        // ---- FLAGSHIP: Is this photo real or AI? (deepfake) ----
-        Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFFFF4DA0), Color(0xFF7C5CFF))))
-                .clickable { onOpenDeepfake() }.padding(18.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(60.dp).clip(CircleShape).background(Color.White),
-                    contentAlignment = Alignment.Center) { Text("✨", fontSize = 28.sp) }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Is this photo real or AI?", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(3.dp))
-                    Text("Catch deepfakes in 1 tap — free", color = Color(0xF5F5F0FF), fontSize = 12.sp)
-                    Spacer(Modifier.height(10.dp))
-                    Box(Modifier.clip(RoundedCornerShape(12.dp)).background(Color.White)
-                        .padding(horizontal = 14.dp, vertical = 7.dp)) {
-                        Text("✨ Check a photo  →", color = Color(0xFF7C5CFF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+        // ---- QUICK CHECKS: one tap, no confusion ----
+        SectionTitle("CHECK ANYTHING — 1 TAP")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ToolCard(Modifier.weight(1f), "💬", "Message", "Scam or real?") { onOpenTool("#scan") }
+            ToolCard(Modifier.weight(1f), "📸", "Screenshot", "Upload a chat pic") { onOpenTool("#scan") }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ToolCard(Modifier.weight(1f), "🖼️", "Photo", "Real or AI?") { onOpenTool("#deepfake") }
+            ToolCard(Modifier.weight(1f), "💳", "Payment", "Check before you pay") { onOpenTool("#pay") }
         }
         Spacer(Modifier.height(16.dp))
 
@@ -199,7 +188,7 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
             Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF13243A)),
                 shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("⬆️  Update available: ${up.tag}", color = Color(0xFF22D3EE),
+                    Text("⬆️  Update available: ${up.tag}", color = Color(0xFF3B82F6),
                         fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     if (updateMsg.isNotBlank()) {
                         Spacer(Modifier.height(4.dp)); Text(updateMsg, color = Color(0xFF8B91B5), fontSize = 13.sp)
@@ -250,7 +239,7 @@ private fun GuardScreen(onOpenDeepfake: () -> Unit) {
             // ---- PROTECTED: premium dashboard ----
             Box(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF7C5CFF), Color(0xFF22D3EE))))
+                    .background(Brush.linearGradient(listOf(Color(0xFF2F6BFF), Color(0xFF1D4ED8))))
                     .padding(24.dp)
             ) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -442,8 +431,23 @@ private fun AdvancedDialog(prefs: Prefs, onDismiss: () -> Unit) {
 }
 
 @Composable
+private fun ToolCard(modifier: Modifier, emoji: String, title: String, sub: String, onClick: () -> Unit) {
+    Column(
+        modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF111520))
+            .clickable { onClick() }.padding(16.dp)
+    ) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Color(0x1F2F6BFF)),
+            contentAlignment = Alignment.Center) { Text(emoji, fontSize = 19.sp) }
+        Spacer(Modifier.height(10.dp))
+        Text(title, color = Color(0xFFF3F6FC), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(2.dp))
+        Text(sub, color = Color(0xFF868DA3), fontSize = 11.5.sp)
+    }
+}
+
+@Composable
 private fun NavPill(modifier: Modifier, emoji: String, label: String, selected: Boolean, onClick: () -> Unit) {
-    val grad = Brush.horizontalGradient(listOf(Color(0xFF7C5CFF), Color(0xFF22D3EE)))
+    val grad = Brush.horizontalGradient(listOf(Color(0xFF2F6BFF), Color(0xFF1D4ED8)))
     Row(
         modifier
             .clip(RoundedCornerShape(16.dp))
@@ -457,7 +461,7 @@ private fun NavPill(modifier: Modifier, emoji: String, label: String, selected: 
         Spacer(Modifier.width(8.dp))
         Text(label, fontSize = 15.sp,
             fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
-            color = if (selected) Color(0xFF08101F) else Color(0xFF8B91B5))
+            color = if (selected) Color.White else Color(0xFF868DA3))
     }
 }
 
@@ -466,7 +470,7 @@ private fun NavPill(modifier: Modifier, emoji: String, label: String, selected: 
         modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xFF141728)).padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(value, color = Color(0xFF22D3EE), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+        Text(value, color = Color(0xFF3B82F6), fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(2.dp))
         Text(label, color = Color(0xFF8B91B5), fontSize = 11.sp)
     }
