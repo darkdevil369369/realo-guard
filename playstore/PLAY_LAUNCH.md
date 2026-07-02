@@ -122,7 +122,7 @@ Category: **Utility/Tools**. Violence: No. Sexual: No. Profanity: No. Drugs: No.
 - `icon_512.png` — Play app icon (512×512)
 - `feature_1024x500.png` — feature graphic
 - Screenshots: take 4–8 on the phone (portrait), min 320px, 16:9–9:16.
-- AAB: GitHub Actions artifact **realo-guard-aab** (v2.1+, targetSdk 35, signed).
+- AAB: download from the latest release (v2.2 "Truth Engine") -> app-release.aab — this is the Play upload file.
 
 ## ✅ ALREADY DONE (by Claude, 2 Jul)
 - targetSdk 35 + signed release **.aab** built in CI
