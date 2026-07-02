@@ -30,12 +30,36 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
 
+      # cache the AVD image -> subsequent runs skip creation/first-boot (saves ~4-5 min)
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-35-pixel5
+
+      - name: Create AVD snapshot (cache miss only)
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_5
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "AVD snapshot created"
+
       - name: Run emulator + take screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_5
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
             adb install app/build/outputs/apk/debug/app-debug.apk

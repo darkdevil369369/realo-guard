@@ -36,14 +36,22 @@ def find_bounds(xml, text, exact=False):
                     return ((x1 + x2) // 2, (y1 + y2) // 2)
     return None
 
-def tap_text(text, tries=6, exact=False):
-    for i in range(tries):
+def wait_text(text, timeout=20, exact=False):
+    """Poll until the text appears on screen (fast when it's already there)."""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
         c = find_bounds(dump(), text, exact)
         if c:
-            adb(f"shell input tap {c[0]} {c[1]}")
-            time.sleep(1.2)
-            return True
-        time.sleep(2)
+            return c
+        time.sleep(1)
+    return None
+
+def tap_text(text, tries=6, exact=False):
+    c = wait_text(text, timeout=tries * 2, exact=exact)
+    if c:
+        adb(f"shell input tap {c[0]} {c[1]}")
+        time.sleep(1)
+        return True
     print(f"!! could not find '{text}'"); return False
 
 def type_text(s):
@@ -64,7 +72,7 @@ def main():
     # grant notification access BEFORE login so home shows the protected dashboard
     adb(f"shell cmd notification allow_listener {PKG}/.service.ScanListenerService")
     adb(f"shell monkey -p {PKG} -c android.intent.category.LAUNCHER 1")
-    time.sleep(6)
+    wait_text("REALO", timeout=25)   # app drawn (auth or home)
 
     # ---- login ----
     tap_text("Log in")                      # mode toggle
@@ -83,30 +91,24 @@ def main():
         if bm:
             x1, y1, x2, y2 = map(int, bm.groups())
             adb(f"shell input tap {(x1+x2)//2} {(y1+y2)//2}")
-    time.sleep(8)                           # network login
+    wait_text("CHECK ANYTHING", timeout=25)  # login done -> Guard home drawn
 
     # ---- Guard home (protected dashboard) ----
     shot("1_guard_home")
 
-    # ---- quick check cards -> Tools WebView ----
+    # ---- quick check cards -> Tools WebView (fixed short waits: webview DOM isn't
+    # visible to uiautomator, so poll can't help much — 6s is enough on cached AVD) ----
     if tap_text("Photo", exact=False):
-        time.sleep(10)                      # webview load
+        time.sleep(6)
         shot("2_photo_check")
-    # back to Guard
     tap_text("Guard", exact=True)
-    time.sleep(2)
     if tap_text("Message", exact=False):
-        time.sleep(10)
+        time.sleep(6)
         shot("3_message_scan")
     tap_text("Guard", exact=True)
-    time.sleep(2)
     if tap_text("Payment", exact=False):
-        time.sleep(10)
+        time.sleep(6)
         shot("4_pay_safe")
-    # Tools tab full view
-    tap_text("Tools", exact=True)
-    time.sleep(8)
-    shot("5_tools")
     print("DONE")
 
 if __name__ == "__main__":
