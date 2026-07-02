@@ -40,6 +40,9 @@ jobs:
           script: |
             adb install app/build/outputs/apk/debug/app-debug.apk
             python3 scripts/emu_screens.py
+        env:
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4

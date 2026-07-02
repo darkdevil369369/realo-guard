@@ -4,8 +4,9 @@ Runs inside GitHub Actions (KVM emulator). Taps are resolved from uiautomator du
 import subprocess, time, re, sys, os
 
 OUT = "shots"
-EMAIL = "playstore.demo@tryrealo.com"
-PASSWORD = "RealoDemo26"
+# demo-account credentials come from GitHub Actions secrets — never hardcode (GitGuardian incident, Jul 2 2026)
+EMAIL = os.environ.get("DEMO_EMAIL", "")
+PASSWORD = os.environ.get("DEMO_PASSWORD", "")
 PKG = "com.realo.guard"
 
 def sh(cmd, **kw):
