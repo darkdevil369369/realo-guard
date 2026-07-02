@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.realo.guard"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.realo.guard"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 21
-        versionName = "2.0.1"
+        targetSdk = 35
+        versionCode = 22
+        versionName = "2.1"
         // Permanent REALO engine backend (Cloudflare named tunnel -> systemd, reboot-proof).
         buildConfigField("String", "DEFAULT_BACKEND", "\"https://api.tryrealo.com\"")
     }
