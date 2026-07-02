@@ -49,5 +49,10 @@
             </intent-filter>
         </service>
 
+        <!-- "Not a scam? Report" action on alert notifications (self-healing feedback) -->
+        <receiver
+            android:name=".service.FeedbackReceiver"
+            android:exported="false" />
+
     </application>
 </manifest>

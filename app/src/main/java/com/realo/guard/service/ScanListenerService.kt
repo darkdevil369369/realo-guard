@@ -56,7 +56,10 @@ class ScanListenerService : NotificationListenerService() {
 
         val appName = appLabel(pkg)
         scope.launch {
-            val r = Engine.scan(prefs.backend, prefs.deviceId, message) ?: return@launch
+            // notification context → engine applies the Hard-Proof Gate (truncated snippets
+            // can't trigger an alarm-level SCAM without visible proof — no more false alarms
+            // on genuine "verify your account" mails from Google/banks)
+            val r = Engine.scan(prefs.backend, prefs.deviceId, message, appName, title) ?: return@launch
             // CREDIBILITY FIRST: only alarm on CLEAR, high-confidence scams.
             // Borderline "SUSPICIOUS" never fires an alarm — a false alarm costs more
             // than a missed borderline case. (Engine precision + trusted-senders also help.)
@@ -123,6 +126,15 @@ class ScanListenerService : NotificationListenerService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val emoji = if (verdict == "SCAM") "🚨" else "⚠️"
+        val id = _alertId.incrementAndGet()
+        // "Not a scam" action → user feedback makes the engine self-healing
+        val fb = Intent(this, FeedbackReceiver::class.java).apply {
+            putExtra("snippet", snippet); putExtra("verdict", verdict)
+            putExtra("conf", conf); putExtra("app", app); putExtra("nid", id)
+        }
+        val fbPi = PendingIntent.getBroadcast(
+            this, id, fb, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
         val n = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle("$emoji $verdict in $app ($conf%)")
@@ -132,9 +144,10 @@ class ScanListenerService : NotificationListenerService() {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setContentIntent(tap)
+            .addAction(0, "Not a scam? Report", fbPi)
             .build()
         // unique id per alert → every scam shows a fresh heads-up (never silently merged)
-        nm.notify(_alertId.incrementAndGet(), n)
+        nm.notify(id, n)
     }
 
     /** Quiet safety nudge for payment requests that are NOT scams — no alarm, no vibration. */

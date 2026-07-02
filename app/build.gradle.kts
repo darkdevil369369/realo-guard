@@ -11,8 +11,8 @@ android {
         applicationId = "com.realo.guard"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "2.1"
+        versionCode = 23
+        versionName = "2.2"
         // Permanent REALO engine backend (Cloudflare named tunnel -> systemd, reboot-proof).
         buildConfigField("String", "DEFAULT_BACKEND", "\"https://api.tryrealo.com\"")
     }
