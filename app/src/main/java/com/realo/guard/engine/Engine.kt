@@ -17,7 +17,8 @@ object Engine {
 
     data class Result(
         val verdict: String, val confidence: Int,
-        val advice: String, val reasons: List<String>
+        val advice: String, val reasons: List<String>,
+        val paymentRequest: Boolean = false
     )
 
     /** Returns null on any failure (never crashes the listener). */
@@ -37,7 +38,8 @@ object Engine {
                     o.optString("verdict", "UNCERTAIN").uppercase(),
                     o.optInt("confidence", 0),
                     o.optString("advice", ""),
-                    reasons
+                    reasons,
+                    o.optBoolean("payment_request", false)
                 )
             }
         } catch (e: Exception) {

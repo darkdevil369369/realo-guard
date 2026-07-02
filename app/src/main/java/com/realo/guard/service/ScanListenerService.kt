@@ -27,6 +27,9 @@ class ScanListenerService : NotificationListenerService() {
     private val recent = object : LinkedHashMap<Int, Long>(64, .75f, true) {
         override fun removeEldestEntry(e: Map.Entry<Int, Long>?) = size > 200
     }
+    private val recentPay = object : LinkedHashMap<Int, Long>(16, .75f, true) {
+        override fun removeEldestEntry(e: Map.Entry<Int, Long>?) = size > 50
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val prefs = Prefs(applicationContext)
@@ -60,6 +63,15 @@ class ScanListenerService : NotificationListenerService() {
             if (r.verdict == "SCAM" && r.confidence >= 80) {
                 prefs.addAlert(appName, r.verdict, r.confidence, body.take(140), r.advice)
                 warn(appName, r.verdict, r.confidence, r.advice, body.take(120))
+            } else if (r.paymentRequest) {
+                // MONEY IS NEVER FULLY SILENT: not a scam, but it asks for money →
+                // one calm, quiet nudge (no alarm sound). Max 1 per app per 10 min.
+                val pk = pkg.hashCode()
+                val pl = recentPay[pk]
+                if (pl == null || now - pl > 600_000) {
+                    recentPay[pk] = now
+                    payNudge(appName, body.take(120))
+                }
             }
         }
     }
@@ -125,8 +137,34 @@ class ScanListenerService : NotificationListenerService() {
         nm.notify(_alertId.incrementAndGet(), n)
     }
 
+    /** Quiet safety nudge for payment requests that are NOT scams — no alarm, no vibration. */
+    private fun payNudge(app: String, snippet: String) {
+        val nm = getSystemService(NotificationManager::class.java)
+        val ch = NotificationChannel(
+            PAY_CHANNEL, "Payment check reminders", NotificationManager.IMPORTANCE_LOW
+        ).apply { description = "Gentle reminder to verify the receiver before paying"; enableVibration(false) }
+        nm.createNotificationChannel(ch)
+        val tap = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val n = NotificationCompat.Builder(this, PAY_CHANNEL)
+            .setSmallIcon(R.drawable.ic_shield)
+            .setContentTitle("💳 Payment request in $app")
+            .setContentText("Looks OK — still check the receiver's name before paying.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                "“$snippet”\n\nLooks OK — but money is money: confirm the receiver's name in your payment app matches who you expect. Unsure? Check it in REALO Pay-Safe."))
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(tap)
+            .build()
+        nm.notify(_alertId.incrementAndGet(), n)
+    }
+
     companion object {
         private const val CHANNEL = "realo_alerts"
+        private const val PAY_CHANNEL = "realo_pay"
         private val _alertId = java.util.concurrent.atomic.AtomicInteger(1000)
     }
 }
