@@ -3,7 +3,12 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- white shield -->
     <path
-        android:fillColor="#FF7C5CFF"
-        android:pathData="M54,28L38,34v14c0,9 6.2,17 16,20c9.8,-3 16,-11 16,-20V34L54,28zM50,62l-6,-6l2.8,-2.8l3.2,3.2l8,-8L61,51.4L50,62z"/>
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,26L33,34v16c0,13.5 8.7,24.2 21,28c12.3,-3.8 21,-14.5 21,-28V34L54,26z"/>
+    <!-- blue check cut into the shield -->
+    <path
+        android:fillColor="#FF1D4ED8"
+        android:pathData="M50.5,64.5l-9.5,-9.5l4.2,-4.2l5.3,5.3l12.3,-12.3l4.2,4.2L50.5,64.5z"/>
 </vector>
