@@ -33,7 +33,7 @@ jobs:
       - name: Run emulator + take screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35
           arch: x86_64
           profile: pixel_5
           disable-animations: true

@@ -47,7 +47,7 @@ fun AuthScreen(prefs: Prefs, onAuthed: () -> Unit) {
 
     Surface(Modifier.fillMaxSize(), color = Color(0xFF0B0D17)) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(40.dp))

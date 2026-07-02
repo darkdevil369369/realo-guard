@@ -336,7 +336,9 @@ private fun ToolsScreen(activity: MainActivity, hash: String = "") {
 private fun BottomNav(tab: Tab, onSelect: (Tab) -> Unit, onAdvanced: () -> Unit, onLogout: () -> Unit) {
     Surface(color = Color(0xFF0F1220)) {
         Column(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            // Android 15 (targetSdk 35) forces edge-to-edge: without this padding the
+            // bottom row (Advanced / Log out) hides under the system navigation bar.
+            Modifier.navigationBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // TOP row: Guard | Tools
